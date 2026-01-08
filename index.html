@@ -16,7 +16,7 @@
       touch-action: manipulation;
     }
 
-    /* ボタン定義：高さ72px */
+    /* 基本ボタン定義：高さ72px, 縦並び */
     .btn-icon {
       display: flex;
       flex-direction: column;
@@ -35,6 +35,13 @@
     .btn-icon:active { transform: scale(0.96); }
     
     .icon-lg { font-size: 1.6rem; margin-bottom: 4px; } 
+
+    /* 横並びボタン用（初期表示ボタン） */
+    .btn-row {
+      flex-direction: row !important;
+      gap: 12px;
+    }
+    .btn-row .icon-lg { margin-bottom: 0; }
 
     .btn-netkeiba { background-color: #3850B0; color: #ffffff; }
     .btn-race { background-color: #783020; color: #ffffff; }
@@ -67,9 +74,9 @@
     .parse-info { font-family: 'Roboto Mono', monospace; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-start pt-10 px-6 pb-20">
+<body class="min-h-screen flex flex-col items-center justify-start pt-8 px-6 pb-10">
 
-  <div class="w-full max-w-sm mb-8">
+  <div class="w-full max-w-sm mb-6">
     <label class="block text-sm text-gray-400 mb-1 pl-1">netkeiba URL (Paste)</label>
     <div class="relative">
       <input type="text" id="urlInput" 
@@ -84,7 +91,7 @@
     <div id="parseStatus" class="h-6 mt-2 text-sm text-green-500 parse-info truncate text-center"></div>
   </div>
 
-  <div id="dateSection" class="w-full max-w-[200px] mb-8 opacity-30 transition-opacity duration-300 pointer-events-none">
+  <div id="dateSection" class="w-full max-w-[200px] mb-6 opacity-30 transition-opacity duration-300 pointer-events-none">
     <label class="block text-sm text-center text-gray-500 mb-1">Date (MMDD)</label>
     <input type="tel" id="dateInput" maxlength="4"
       class="pin-input"
@@ -94,40 +101,21 @@
     >
   </div>
 
-  <div id="initialActionArea" class="w-full max-w-sm flex justify-center mb-8 fade-in">
-    <a href="https://sp.netkeiba.com/" target="_blank" rel="noopener" class="btn-icon btn-netkeiba w-full shadow-lg">
+  <div id="initialActionArea" class="w-full max-w-sm flex justify-center mb-6 fade-in">
+    <a href="https://sp.netkeiba.com/" target="_blank" rel="noopener" class="btn-icon btn-row btn-netkeiba w-full shadow-lg">
       <div class="icon-lg"><i class="fas fa-home"></i></div>
-      <div>netkeiba Top</div>
+      <div class="text-lg">netkeiba</div>
     </a>
   </div>
 
-  <div id="resultGrid" class="w-full max-w-sm grid grid-cols-2 gap-4 hidden">
+  <div id="resultGrid" class="w-full max-w-sm grid grid-cols-2 gap-4 hidden mb-6">
     </div>
 
-  <div id="noteSection" class="w-full max-w-sm mt-10 text-sm text-gray-400 leading-relaxed hidden">
-    <div class="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
-      <div class="mb-3">
-        <span class="font-bold text-gray-300">マルチカメラ・パトロール</span>
-        <div class="mt-1 pl-4 space-y-1 text-gray-400">
-          <div class="flex items-center gap-2">
-            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
-            <span>重賞：2015.1〜</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
-            <span>全て：2020.10〜</span>
-          </div>
-        </div>
-      </div>
-      <div>
-        <span class="font-bold text-gray-300">時計表示</span>
-        <div class="mt-1 pl-4">
-          <div class="flex items-center gap-2">
-            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
-            <span>2022.10〜</span>
-          </div>
-        </div>
-      </div>
+  <div id="noteSection" class="w-full max-w-sm text-xs text-gray-500 leading-relaxed hidden text-center">
+    <div class="space-y-1">
+      <p class="font-bold text-gray-400">マルチカメラ・パトロール</p>
+      <p>重賞：2015.1〜　　全て：2020.10〜</p>
+      <p class="pt-2 font-bold text-gray-400">時計表示：<span class="font-normal text-gray-500">2022.10〜</span></p>
     </div>
   </div>
 
@@ -286,8 +274,6 @@
         dateSection.classList.remove('opacity-30', 'pointer-events-none');
         dateInput.value = ''; 
         dateInput.focus();
-        
-        // 入力成功時はまだTopボタン等は消さない（日付入力待ち）
       } else {
         currentParsed = null;
         parseStatus.textContent = '';
@@ -301,7 +287,6 @@
       dateSection.classList.add('opacity-30', 'pointer-events-none');
       dateInput.value = '';
       
-      // グリッドを隠し、初期ボタンを再表示
       resultGrid.innerHTML = '';
       resultGrid.classList.add('hidden');
       noteSection.classList.add('hidden');
@@ -316,7 +301,6 @@
         dateInput.blur();
         generateButtons(val);
       } else {
-        // 4桁未満になったら結果を隠す
         if (!resultGrid.classList.contains('hidden')) {
            resultGrid.classList.add('hidden');
            noteSection.classList.add('hidden');
@@ -368,6 +352,7 @@
       if (urls.multi)  html += makeBtn(urls.multi, 'マルチカメラ', 'btn-multi', '<i class="fas fa-border-all"></i>', false);
       if (urls.time)   html += makeBtn(urls.time, '時計表示', 'btn-time', '<i class="fas fa-stopwatch"></i>', false);
 
+      // 結果表示のnetkeibaボタンも、もし横並びにしたい場合はクラス追加で対応可（現状は縦）
       html += `
         <a href="https://db.sp.netkeiba.com/race/${currentParsed.fullId}/" target="_blank" class="btn-icon btn-netkeiba fade-in">
           <div class="icon-lg"><i class="fas fa-arrow-up-right-from-square"></i></div>
@@ -377,10 +362,9 @@
 
       resultGrid.innerHTML = html;
       
-      // 切り替え
-      initialActionArea.classList.add('hidden'); // Topボタン隠す
-      resultGrid.classList.remove('hidden'); // 結果表示
-      noteSection.classList.remove('hidden'); // 注意書き表示
+      initialActionArea.classList.add('hidden');
+      resultGrid.classList.remove('hidden');
+      noteSection.classList.remove('hidden');
     }
   </script>
 </body>
