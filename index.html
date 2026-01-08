@@ -16,17 +16,17 @@
       touch-action: manipulation;
     }
 
-    /* ボタン定義：サイズ拡大 */
+    /* ボタン定義：高さ72px */
     .btn-icon {
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       width: 100%;
-      height: 72px; /* 60px -> 72px に拡大 */
+      height: 72px; 
       border-radius: 14px;
       cursor: pointer;
-      font-size: 0.95rem; /* 文字サイズアップ */
+      font-size: 0.95rem;
       font-weight: bold;
       transition: transform 0.1s, opacity 0.2s;
       text-decoration: none;
@@ -34,7 +34,6 @@
     }
     .btn-icon:active { transform: scale(0.96); }
     
-    /* アイコンサイズ調整用クラス */
     .icon-lg { font-size: 1.6rem; margin-bottom: 4px; } 
 
     .btn-netkeiba { background-color: #3850B0; color: #ffffff; }
@@ -85,7 +84,7 @@
     <div id="parseStatus" class="h-6 mt-2 text-sm text-green-500 parse-info truncate text-center"></div>
   </div>
 
-  <div id="dateSection" class="w-full max-w-[200px] mb-10 opacity-30 transition-opacity duration-300 pointer-events-none">
+  <div id="dateSection" class="w-full max-w-[200px] mb-8 opacity-30 transition-opacity duration-300 pointer-events-none">
     <label class="block text-sm text-center text-gray-500 mb-1">Date (MMDD)</label>
     <input type="tel" id="dateInput" maxlength="4"
       class="pin-input"
@@ -95,12 +94,41 @@
     >
   </div>
 
+  <div id="initialActionArea" class="w-full max-w-sm flex justify-center mb-8 fade-in">
+    <a href="https://sp.netkeiba.com/" target="_blank" rel="noopener" class="btn-icon btn-netkeiba w-full shadow-lg">
+      <div class="icon-lg"><i class="fas fa-home"></i></div>
+      <div>netkeiba Top</div>
+    </a>
+  </div>
+
   <div id="resultGrid" class="w-full max-w-sm grid grid-cols-2 gap-4 hidden">
     </div>
 
-  <div id="noteSection" class="w-full max-w-sm mt-10 text-sm text-gray-400 text-center leading-relaxed hidden">
-    <p>マルチカメラ・パトロール：2015.1〜(重賞)、2020.10〜(全)</p>
-    <p>時計表示：2022.10〜</p>
+  <div id="noteSection" class="w-full max-w-sm mt-10 text-sm text-gray-400 leading-relaxed hidden">
+    <div class="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
+      <div class="mb-3">
+        <span class="font-bold text-gray-300">マルチカメラ・パトロール</span>
+        <div class="mt-1 pl-4 space-y-1 text-gray-400">
+          <div class="flex items-center gap-2">
+            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+            <span>重賞：2015.1〜</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+            <span>全て：2020.10〜</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="font-bold text-gray-300">時計表示</span>
+        <div class="mt-1 pl-4">
+          <div class="flex items-center gap-2">
+            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+            <span>2022.10〜</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -231,6 +259,7 @@
     const dateInput = document.getElementById('dateInput');
     const resultGrid = document.getElementById('resultGrid');
     const noteSection = document.getElementById('noteSection');
+    const initialActionArea = document.getElementById('initialActionArea');
 
     urlInput.addEventListener('input', handleUrlInput);
     
@@ -257,9 +286,8 @@
         dateSection.classList.remove('opacity-30', 'pointer-events-none');
         dateInput.value = ''; 
         dateInput.focus();
-        resultGrid.innerHTML = '';
-        resultGrid.classList.add('hidden');
-        noteSection.classList.add('hidden');
+        
+        // 入力成功時はまだTopボタン等は消さない（日付入力待ち）
       } else {
         currentParsed = null;
         parseStatus.textContent = '';
@@ -272,9 +300,12 @@
       parseStatus.textContent = '';
       dateSection.classList.add('opacity-30', 'pointer-events-none');
       dateInput.value = '';
+      
+      // グリッドを隠し、初期ボタンを再表示
       resultGrid.innerHTML = '';
       resultGrid.classList.add('hidden');
       noteSection.classList.add('hidden');
+      initialActionArea.classList.remove('hidden');
     }
 
     dateInput.addEventListener('input', (e) => {
@@ -285,8 +316,12 @@
         dateInput.blur();
         generateButtons(val);
       } else {
-        resultGrid.classList.add('hidden');
-        noteSection.classList.add('hidden');
+        // 4桁未満になったら結果を隠す
+        if (!resultGrid.classList.contains('hidden')) {
+           resultGrid.classList.add('hidden');
+           noteSection.classList.add('hidden');
+           initialActionArea.classList.remove('hidden');
+        }
       }
     });
 
@@ -309,7 +344,6 @@
       const dimRaceSd = !!urls.raceHd && !!urls.raceSd;
       const dimPadSd = !!urls.padHd && !!urls.padSd;
 
-      // アイコンサイズも拡大するクラスを追加 (icon-lg)
       const makeBtn = (url, label, colorCls, iconHtml, dim) => {
         if (!url) return '';
         
@@ -342,8 +376,11 @@
       `;
 
       resultGrid.innerHTML = html;
-      resultGrid.classList.remove('hidden');
-      noteSection.classList.remove('hidden');
+      
+      // 切り替え
+      initialActionArea.classList.add('hidden'); // Topボタン隠す
+      resultGrid.classList.remove('hidden'); // 結果表示
+      noteSection.classList.remove('hidden'); // 注意書き表示
     }
   </script>
 </body>
