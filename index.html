@@ -13,20 +13,20 @@
       font-family: 'Noto Sans JP', sans-serif;
       background-color: #111;
       color: #e5e5e5;
-      touch-action: manipulation; /* ダブルタップズーム防止 */
+      touch-action: manipulation;
     }
 
-    /* ボタン定義 */
+    /* ボタン定義：サイズ拡大 */
     .btn-icon {
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       width: 100%;
-      height: 60px; /* スマホで押しやすいサイズ */
-      border-radius: 12px;
+      height: 72px; /* 60px -> 72px に拡大 */
+      border-radius: 14px;
       cursor: pointer;
-      font-size: 0.8rem;
+      font-size: 0.95rem; /* 文字サイズアップ */
       font-weight: bold;
       transition: transform 0.1s, opacity 0.2s;
       text-decoration: none;
@@ -34,6 +34,9 @@
     }
     .btn-icon:active { transform: scale(0.96); }
     
+    /* アイコンサイズ調整用クラス */
+    .icon-lg { font-size: 1.6rem; margin-bottom: 4px; } 
+
     .btn-netkeiba { background-color: #3850B0; color: #ffffff; }
     .btn-race { background-color: #783020; color: #ffffff; }
     .btn-paddock { background-color: #14532d; color: #dcfce7; }
@@ -59,40 +62,31 @@
     .pin-input:focus { border-color: #22c55e; }
     .pin-input::placeholder { color: #333; letter-spacing: normal; font-size: 1rem; font-family: sans-serif; }
 
-    /* アニメーション */
     .fade-in { animation: fadeIn 0.3s ease-out forwards; opacity: 0; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     .parse-info { font-family: 'Roboto Mono', monospace; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-start pt-8 px-6 pb-20">
-
-  <div class="w-full max-w-sm flex justify-end mb-6">
-    <a href="https://sp.netkeiba.com/" target="_blank" rel="noopener" 
-       class="text-xs text-gray-400 border border-gray-700 rounded-full px-3 py-1 hover:text-white hover:border-gray-500 transition-colors flex items-center gap-1">
-      <span class="font-bold">netkeiba Top</span>
-      <i class="fas fa-arrow-up-right-from-square text-[10px]"></i>
-    </a>
-  </div>
+<body class="min-h-screen flex flex-col items-center justify-start pt-10 px-6 pb-20">
 
   <div class="w-full max-w-sm mb-8">
-    <label class="block text-xs text-gray-400 mb-1 pl-1">netkeiba URL (Paste)</label>
+    <label class="block text-sm text-gray-400 mb-1 pl-1">netkeiba URL (Paste)</label>
     <div class="relative">
       <input type="text" id="urlInput" 
-        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-200 focus:border-green-500 outline-none transition-colors"
+        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-4 text-base text-gray-200 focus:border-green-500 outline-none transition-colors"
         placeholder="https://db.sp.netkeiba.com/..."
         autocomplete="off"
       >
-      <button id="clearBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 p-2 hidden">
-        <i class="fas fa-times-circle"></i>
+      <button id="clearBtn" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 p-2 hidden">
+        <i class="fas fa-times-circle text-lg"></i>
       </button>
     </div>
-    <div id="parseStatus" class="h-6 mt-1 text-xs text-green-500 parse-info truncate"></div>
+    <div id="parseStatus" class="h-6 mt-2 text-sm text-green-500 parse-info truncate text-center"></div>
   </div>
 
   <div id="dateSection" class="w-full max-w-[200px] mb-10 opacity-30 transition-opacity duration-300 pointer-events-none">
-    <label class="block text-xs text-center text-gray-500 mb-1">Date (MMDD)</label>
+    <label class="block text-sm text-center text-gray-500 mb-1">Date (MMDD)</label>
     <input type="tel" id="dateInput" maxlength="4"
       class="pin-input"
       placeholder="----"
@@ -101,10 +95,10 @@
     >
   </div>
 
-  <div id="resultGrid" class="w-full max-w-sm grid grid-cols-2 gap-3 hidden">
+  <div id="resultGrid" class="w-full max-w-sm grid grid-cols-2 gap-4 hidden">
     </div>
 
-  <div id="noteSection" class="w-full max-w-sm mt-8 text-[10px] text-gray-500 text-center leading-relaxed hidden">
+  <div id="noteSection" class="w-full max-w-sm mt-10 text-sm text-gray-400 text-center leading-relaxed hidden">
     <p>マルチカメラ・パトロール：2015.1〜(重賞)、2020.10〜(全)</p>
     <p>時計表示：2022.10〜</p>
   </div>
@@ -135,11 +129,11 @@
       };
     }
 
-    function yyyymmFromDate(dateStr) { // YYYYMMDD string format
+    function yyyymmFromDate(dateStr) { 
       return parseInt(dateStr.substring(0, 6), 10);
     }
 
-    function getQualityProfile(dateStr) { // dateStr: YYYYMMDD
+    function getQualityProfile(dateStr) { 
       const ym = yyyymmFromDate(dateStr);
       
       const profile = {
@@ -152,13 +146,11 @@
 
       if (ym < 201401) return profile;
 
-      // 2014/01 ～ 2014/12
       if (ym >= 201401 && ym < 201501) {
         profile.paddock.sd = 1;
         return profile;
       }
 
-      // 2015/01 ～ 2016/12
       if (ym >= 201501 && ym < 201701) {
         profile.paddock.sd = 1;
         profile.multi.hd = 1; 
@@ -166,7 +158,6 @@
         return profile;
       }
 
-      // 2017/01 ～ 2020/09
       if (ym >= 201701 && ym < 202010) {
         profile.paddock.sd = 1;
         profile.race.hd = 4;
@@ -176,7 +167,6 @@
         return profile;
       }
 
-      // 2020/10 ～ 2022/09
       if (ym >= 202010 && ym < 202210) {
         profile.paddock.hd = 4;
         profile.paddock.sd = 1;
@@ -187,7 +177,6 @@
         return profile;
       }
 
-      // 2022/10 ～ 現在
       if (ym >= 202210) {
         profile.paddock.hd = 4;
         profile.paddock.sd = 1;
@@ -320,14 +309,15 @@
       const dimRaceSd = !!urls.raceHd && !!urls.raceSd;
       const dimPadSd = !!urls.padHd && !!urls.padSd;
 
+      // アイコンサイズも拡大するクラスを追加 (icon-lg)
       const makeBtn = (url, label, colorCls, iconHtml, dim) => {
         if (!url) return '';
         
         const opacity = dim ? 'opacity-40' : 'opacity-100';
         return `
           <a href="${url}" target="_blank" class="btn-icon ${colorCls} ${opacity} fade-in">
-            <div class="text-2xl mb-1">${iconHtml}</div>
-            <div class="text-xs">${label}</div>
+            <div class="icon-lg">${iconHtml}</div>
+            <div>${label}</div>
           </a>
         `;
       };
@@ -335,10 +325,10 @@
       let html = '';
 
       if (urls.raceHd) html += makeBtn(urls.raceHd, 'レース(HD)', 'btn-race', '<i class="fas fa-play"></i>', false);
-      if (urls.raceSd) html += makeBtn(urls.raceSd, 'レース(SD)', 'btn-race', '<span class="font-bold text-sm">SD</span>', dimRaceSd);
+      if (urls.raceSd) html += makeBtn(urls.raceSd, 'レース(SD)', 'btn-race', '<span class="font-bold">SD</span>', dimRaceSd);
       
       if (urls.padHd)  html += makeBtn(urls.padHd, 'パドック(HD)', 'btn-paddock', '<i class="fas fa-horse"></i>', false);
-      if (urls.padSd)  html += makeBtn(urls.padSd, 'パドック(SD)', 'btn-paddock', '<span class="font-bold text-sm">SD</span>', dimPadSd);
+      if (urls.padSd)  html += makeBtn(urls.padSd, 'パドック(SD)', 'btn-paddock', '<span class="font-bold">SD</span>', dimPadSd);
 
       if (urls.patrol) html += makeBtn(urls.patrol, 'パトロール', 'btn-patrol', '<i class="fas fa-video"></i>', false);
       if (urls.multi)  html += makeBtn(urls.multi, 'マルチカメラ', 'btn-multi', '<i class="fas fa-border-all"></i>', false);
@@ -346,8 +336,8 @@
 
       html += `
         <a href="https://db.sp.netkeiba.com/race/${currentParsed.fullId}/" target="_blank" class="btn-icon btn-netkeiba fade-in">
-          <div class="text-2xl mb-1"><i class="fas fa-arrow-up-right-from-square"></i></div>
-          <div class="text-xs">netkeiba</div>
+          <div class="icon-lg"><i class="fas fa-arrow-up-right-from-square"></i></div>
+          <div>netkeiba</div>
         </a>
       `;
 
