@@ -68,6 +68,14 @@
 </head>
 <body class="min-h-screen flex flex-col items-center justify-start pt-8 px-6 pb-20">
 
+  <div class="w-full max-w-sm flex justify-end mb-6">
+    <a href="https://sp.netkeiba.com/" target="_blank" rel="noopener" 
+       class="text-xs text-gray-400 border border-gray-700 rounded-full px-3 py-1 hover:text-white hover:border-gray-500 transition-colors flex items-center gap-1">
+      <span class="font-bold">netkeiba Top</span>
+      <i class="fas fa-arrow-up-right-from-square text-[10px]"></i>
+    </a>
+  </div>
+
   <div class="w-full max-w-sm mb-8">
     <label class="block text-xs text-gray-400 mb-1 pl-1">netkeiba URL (Paste)</label>
     <div class="relative">
@@ -151,22 +159,20 @@
       }
 
       // 2015/01 ～ 2016/12
-      // 【修正】パトロールもマルチ同様に無条件有効化 (重賞のみの期間だがボタンは出す)
       if (ym >= 201501 && ym < 201701) {
         profile.paddock.sd = 1;
         profile.multi.hd = 1; 
-        profile.patrol.hd = 2; // 古い形式のHD(SD相当)
+        profile.patrol.hd = 2; 
         return profile;
       }
 
       // 2017/01 ～ 2020/09
-      // 【修正】パトロールもマルチ同様に無条件有効化
       if (ym >= 201701 && ym < 202010) {
         profile.paddock.sd = 1;
         profile.race.hd = 4;
         profile.race.sd = 2;
         profile.multi.hd = 4; 
-        profile.patrol.hd = 5; // 新しい形式のHD
+        profile.patrol.hd = 5; 
         return profile;
       }
 
@@ -347,7 +353,7 @@
 
       resultGrid.innerHTML = html;
       resultGrid.classList.remove('hidden');
-      noteSection.classList.remove('hidden'); // 注意書きを表示
+      noteSection.classList.remove('hidden');
     }
   </script>
 </body>
