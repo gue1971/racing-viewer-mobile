@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Instant Viewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@500&display=swap');
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: #111;
+      color: #e5e5e5;
+      touch-action: manipulation; /* ダブルタップズーム防止 */
+    }
+
+    /* ボタン定義（前回踏襲） */
+    .btn-icon {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 60px; /* スマホで押しやすいサイズ */
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: bold;
+      transition: transform 0.1s, opacity 0.2s;
+      text-decoration: none;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    .btn-icon:active { transform: scale(0.96); }
+    
+    .btn-netkeiba { background-color: #3850B0; color: #ffffff; }
+    .btn-race { background-color: #783020; color: #ffffff; }
+    .btn-paddock { background-color: #14532d; color: #dcfce7; }
+    .btn-patrol { background-color: #374151; color: #f3f4f6; }
+    .btn-multi { background-color: #581c87; color: #f3e8ff; }
+    .btn-time { background-color: #312e81; color: #e0e7ff; }
+
+    /* PIN入力風スタイル */
+    .pin-input {
+      font-family: 'Roboto Mono', monospace;
+      letter-spacing: 0.5em;
+      text-align: center;
+      font-size: 2rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid #444;
+      color: white;
+      width: 100%;
+      outline: none;
+      padding: 10px 0;
+      transition: border-color 0.3s;
+    }
+    .pin-input:focus { border-color: #22c55e; }
+    .pin-input::placeholder { color: #333; letter-spacing: normal; font-size: 1rem; font-family: sans-serif; }
+
+    /* アニメーション */
+    .fade-in { animation: fadeIn 0.3s ease-out forwards; opacity: 0; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .parse-info { font-family: 'Roboto Mono', monospace; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start pt-8 px-6 pb-20">
+
+  <div class="w-full max-w-sm mb-8">
+    <label class="block text-xs text-gray-400 mb-1 pl-1">netkeiba URL (Paste)</label>
+    <div class="relative">
+      <input type="text" id="urlInput" 
+        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-200 focus:border-green-500 outline-none transition-colors"
+        placeholder="https://db.sp.netkeiba.com/..."
+        autocomplete="off"
+      >
+      <button id="clearBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 p-2 hidden">
+        <i class="fas fa-times-circle"></i>
+      </button>
+    </div>
+    <div id="parseStatus" class="h-6 mt-1 text-xs text-green-500 parse-info truncate"></div>
+  </div>
+
+  <div id="dateSection" class="w-full max-w-[200px] mb-10 opacity-30 transition-opacity duration-300 pointer-events-none">
+    <label class="block text-xs text-center text-gray-500 mb-1">Date (MMDD)</label>
+    <input type="tel" id="dateInput" maxlength="4"
+      class="pin-input"
+      placeholder="----"
+      inputmode="numeric"
+      pattern="[0-9]*"
+    >
+  </div>
+
+  <div id="resultGrid" class="w-full max-w-sm grid grid-cols-2 gap-3 hidden">
+    </div>
+
+  <script>
+    // ==========================================
+    // Core Logic (Ported from your index.html)
+    // ==========================================
+    const PLACE_MAP = {
+      '01': '札幌', '02': '函館', '03': '福島', '04': '新潟', '05': '東京',
+      '06': '中山', '07': '中京', '08': '京都', '09': '阪神', '10': '小倉'
+    };
+
+    let currentParsed = null;
+
+    function parseNetkeibaID(urlOrId) {
+      // URLからID部分(12桁)を抽出
+      const match = urlOrId.match(/(\d{12})/);
+      if (!match) return null;
+      const s = match[1];
+
+      return {
+        fullId: s,
+        year: s.substring(0, 4),
+        place: s.substring(4, 6),
+        kai: s.substring(6, 8),
+        day: s.substring(8, 10),
+        race: s.substring(10, 12)
+      };
+    }
+
+    function yyyymmFromDate(dateStr) { // YYYYMMDD string format
+      return parseInt(dateStr.substring(0, 6), 10);
+    }
+
+    function getQualityProfile(dateStr) { // dateStr: YYYYMMDD
+      const ym = yyyymmFromDate(dateStr);
+      // "Instant"版なので、レース名は不明。
+      // 基本的に最新(2022.10以降)は全開放、それ以前は安全側（SDあり）で倒す。
+      // 古い重賞(Graded)判定はできないので、標準的なプロファイルを返す。
+      
+      const profile = {
+        race:    { hd: null, sd: 2 },
+        paddock: { hd: null, sd: null },
+        time:    { hd: null },
+        multi:   { hd: null },
+        patrol:  { hd: null, sd: null }
+      };
+
+      if (ym < 201401) return profile;
+
+      // 2014-2016あたり (簡易化: SDパドック有効化)
+      if (ym >= 201401 && ym < 201701) {
+        profile.paddock.sd = 1;
+        // ※この時期のマルチ/パトロールは重賞限定が多いが、URL生成はトライしても害はない
+        // ここでは安全のため出さない、もしくはSDで出す
+        return profile;
+      }
+
+      // 2017/01～2020/09
+      if (ym >= 201701 && ym < 202010) {
+        profile.paddock.sd = 1;
+        profile.race.hd = 4; // 一般戦でもHD化が進んだ時期と仮定
+        profile.race.sd = 2;
+        // マルチ・パトロールはこの時期一般戦では無いことが多い
+        return profile;
+      }
+
+      // 2020/10～2022/09 (ほぼ全部入り)
+      if (ym >= 202010 && ym < 202210) {
+        profile.paddock.hd = 4;
+        profile.paddock.sd = 1;
+        profile.race.hd = 5;
+        profile.race.sd = 2;
+        profile.multi.hd = 4;
+        profile.patrol.hd = 5;
+        return profile;
+      }
+
+      // 2022/10～ (時計付き含むフルセット)
+      if (ym >= 202210) {
+        profile.paddock.hd = 4;
+        profile.paddock.sd = 1;
+        profile.race.hd = 5;
+        profile.race.sd = 2;
+        profile.time.hd = 5;
+        profile.multi.hd = 4;
+        profile.patrol.hd = 5;
+        return profile;
+      }
+      return profile;
+    }
+
+    function buildViewerUrl(parsed, dateStr, kind, quality) {
+      if (!parsed || !quality || !dateStr) return null;
+
+      // dateStr: YYYYMMDD
+      const ym = yyyymmFromDate(dateStr);
+      const yy = parsed.year.substring(2, 4);
+      const p = parseInt(parsed.place, 10).toString(); // 0埋め除去
+      const kNum = parseInt(parsed.kai, 10);
+      const k = (kNum >= 10) ? kNum.toString(16) : kNum.toString(); // HEX
+      const dNum = parseInt(parsed.day, 10);
+      const d = (dNum >= 10) ? dNum.toString(16) : dNum.toString(); // HEX
+      const rNum = parseInt(parsed.race, 10);
+      const rCode = (rNum >= 10) ? rNum.toString(16) : rNum.toString(); // HEX
+
+      const viewerId = `${yy}${p}${k}${d}${rCode}`;
+      
+      const baseUrl = (kind === "multi" && ym < 201701)
+        ? "https://regist.prc.jp/api/windowopen.aspx?target=multi_all"
+        : "https://regist.prc.jp/api/windowopen.aspx?target=race";
+        
+      const base = `${baseUrl}/${parsed.year}/${dateStr}/${viewerId}`;
+
+      let suffix = "";
+      if (kind === 'race') suffix = `&quality=${quality}&view=0`;
+      else if (kind === 'time') suffix = `_t&quality=${quality}`;
+      else if (kind === 'paddock') suffix = `_p&quality=${quality}`;
+      else if (kind === 'multi') suffix = `_m&quality=${quality}`;
+      else if (kind === 'patrol') suffix = `&quality=${quality}&view=1`;
+
+      return base + suffix;
+    }
+
+    // ==========================================
+    // UI Interaction
+    // ==========================================
+    const urlInput = document.getElementById('urlInput');
+    const clearBtn = document.getElementById('clearBtn');
+    const parseStatus = document.getElementById('parseStatus');
+    const dateSection = document.getElementById('dateSection');
+    const dateInput = document.getElementById('dateInput');
+    const resultGrid = document.getElementById('resultGrid');
+
+    // 1. URL Input Handling
+    urlInput.addEventListener('input', handleUrlInput);
+    
+    // クリップボードからの貼り付けを検知して即処理
+    urlInput.addEventListener('paste', (e) => {
+      setTimeout(handleUrlInput, 10); // paste直後はvalueが空のことがあるため
+    });
+
+    clearBtn.addEventListener('click', () => {
+      urlInput.value = '';
+      resetAll();
+      urlInput.focus();
+    });
+
+    function handleUrlInput() {
+      const val = urlInput.value.trim();
+      clearBtn.classList.toggle('hidden', val.length === 0);
+
+      const parsed = parseNetkeibaID(val);
+      if (parsed) {
+        currentParsed = parsed;
+        const pName = PLACE_MAP[parsed.place] || '海外';
+        parseStatus.textContent = `${parsed.year}年 ${pName} ${parseInt(parsed.kai)}回${parseInt(parsed.day)}日 ${parseInt(parsed.race)}R`;
+        
+        // Activate Date Input
+        dateSection.classList.remove('opacity-30', 'pointer-events-none');
+        dateInput.value = ''; // Reset date
+        dateInput.focus();
+        resultGrid.innerHTML = '';
+        resultGrid.classList.add('hidden');
+      } else {
+        currentParsed = null;
+        parseStatus.textContent = '';
+        dateSection.classList.add('opacity-30', 'pointer-events-none');
+      }
+    }
+
+    function resetAll() {
+      currentParsed = null;
+      parseStatus.textContent = '';
+      dateSection.classList.add('opacity-30', 'pointer-events-none');
+      dateInput.value = '';
+      resultGrid.innerHTML = '';
+      resultGrid.classList.add('hidden');
+    }
+
+    // 2. Date Input Handling (PIN style)
+    dateInput.addEventListener('input', (e) => {
+      const val = dateInput.value.replace(/[^0-9]/g, '');
+      dateInput.value = val; // 数字以外除去
+
+      if (val.length === 4 && currentParsed) {
+        // 4桁入ったら即生成
+        dateInput.blur(); // キーボード閉じる
+        generateButtons(val);
+      } else {
+        resultGrid.classList.add('hidden');
+      }
+    });
+
+    // 3. Generate Buttons
+    function generateButtons(mmdd) {
+      if (!currentParsed) return;
+      
+      const fullDate = `${currentParsed.year}${mmdd}`; // YYYYMMDD
+      const profile = getQualityProfile(fullDate);
+
+      // URL生成
+      const urls = {
+        raceHd: buildViewerUrl(currentParsed, fullDate, 'race', profile.race.hd),
+        raceSd: buildViewerUrl(currentParsed, fullDate, 'race', profile.race.sd),
+        padHd:  buildViewerUrl(currentParsed, fullDate, 'paddock', profile.paddock.hd),
+        padSd:  buildViewerUrl(currentParsed, fullDate, 'paddock', profile.paddock.sd),
+        patrol: buildViewerUrl(currentParsed, fullDate, 'patrol', profile.patrol.hd),
+        multi:  buildViewerUrl(currentParsed, fullDate, 'multi', profile.multi.hd),
+        time:   buildViewerUrl(currentParsed, fullDate, 'time', profile.time.hd),
+      };
+
+      // 薄くするフラグ
+      const dimRaceSd = !!urls.raceHd && !!urls.raceSd;
+      const dimPadSd = !!urls.padHd && !!urls.padSd;
+
+      // HTML生成ヘルパ
+      const makeBtn = (url, label, colorCls, iconHtml, dim) => {
+        if (!url) return ''; // URLなければ非表示（今回はレイアウト崩れ防ぐため空文字か、プレースホルダにするか。ここでは非表示）
+        
+        const opacity = dim ? 'opacity-40' : 'opacity-100';
+        return `
+          <a href="${url}" target="_blank" class="btn-icon ${colorCls} ${opacity} fade-in">
+            <div class="text-2xl mb-1">${iconHtml}</div>
+            <div class="text-xs">${label}</div>
+          </a>
+        `;
+      };
+
+      // グリッド生成（7つのアイコン + netkeibaリンク）
+      let html = '';
+
+      // 1. Race HD
+      if (urls.raceHd) html += makeBtn(urls.raceHd, 'レース(HD)', 'btn-race', '<i class="fas fa-play"></i>', false);
+      // 2. Race SD
+      if (urls.raceSd) html += makeBtn(urls.raceSd, 'レース(SD)', 'btn-race', '<span class="font-bold text-sm">SD</span>', dimRaceSd);
+      
+      // 3. Paddock HD
+      if (urls.padHd)  html += makeBtn(urls.padHd, 'パドック(HD)', 'btn-paddock', '<i class="fas fa-horse"></i>', false);
+      // 4. Paddock SD
+      if (urls.padSd)  html += makeBtn(urls.padSd, 'パドック(SD)', 'btn-paddock', '<span class="font-bold text-sm">SD</span>', dimPadSd);
+
+      // 5. Patrol
+      if (urls.patrol) html += makeBtn(urls.patrol, 'パトロール', 'btn-patrol', '<i class="fas fa-video"></i>', false);
+      
+      // 6. Multi
+      if (urls.multi)  html += makeBtn(urls.multi, 'マルチ', 'btn-multi', '<i class="fas fa-border-all"></i>', false);
+      
+      // 7. Time
+      if (urls.time)   html += makeBtn(urls.time, '時計判定', 'btn-time', '<i class="fas fa-stopwatch"></i>', false);
+
+      // 8. Netkeiba Original (便利なので入れておく)
+      html += `
+        <a href="https://db.sp.netkeiba.com/race/${currentParsed.fullId}/" target="_blank" class="btn-icon btn-netkeiba fade-in">
+          <div class="text-2xl mb-1"><i class="fas fa-arrow-up-right-from-square"></i></div>
+          <div class="text-xs">netkeiba</div>
+        </a>
+      `;
+
+      resultGrid.innerHTML = html;
+      resultGrid.classList.remove('hidden');
+    }
+
+  </script>
+</body>
+</html>
