@@ -16,7 +16,7 @@
       touch-action: manipulation; /* ダブルタップズーム防止 */
     }
 
-    /* ボタン定義（前回踏襲） */
+    /* ボタン定義 */
     .btn-icon {
       display: flex;
       flex-direction: column;
@@ -96,9 +96,14 @@
   <div id="resultGrid" class="w-full max-w-sm grid grid-cols-2 gap-3 hidden">
     </div>
 
+  <div id="noteSection" class="w-full max-w-sm mt-8 text-[10px] text-gray-500 text-center leading-relaxed hidden">
+    <p>マルチカメラ・パトロール：2015.1〜(重賞)、2020.10〜(全)</p>
+    <p>時計表示：2022.10〜</p>
+  </div>
+
   <script>
     // ==========================================
-    // Core Logic (Ported from your index.html)
+    // Core Logic
     // ==========================================
     const PLACE_MAP = {
       '01': '札幌', '02': '函館', '03': '福島', '04': '新潟', '05': '東京',
@@ -108,7 +113,6 @@
     let currentParsed = null;
 
     function parseNetkeibaID(urlOrId) {
-      // URLからID部分(12桁)を抽出
       const match = urlOrId.match(/(\d{12})/);
       if (!match) return null;
       const s = match[1];
@@ -129,9 +133,6 @@
 
     function getQualityProfile(dateStr) { // dateStr: YYYYMMDD
       const ym = yyyymmFromDate(dateStr);
-      // "Instant"版なので、レース名は不明。
-      // 基本的に最新(2022.10以降)は全開放、それ以前は安全側（SDあり）で倒す。
-      // 古い重賞(Graded)判定はできないので、標準的なプロファイルを返す。
       
       const profile = {
         race:    { hd: null, sd: 2 },
@@ -143,24 +144,33 @@
 
       if (ym < 201401) return profile;
 
-      // 2014-2016あたり (簡易化: SDパドック有効化)
-      if (ym >= 201401 && ym < 201701) {
+      // 2014/01 ～ 2014/12
+      if (ym >= 201401 && ym < 201501) {
         profile.paddock.sd = 1;
-        // ※この時期のマルチ/パトロールは重賞限定が多いが、URL生成はトライしても害はない
-        // ここでは安全のため出さない、もしくはSDで出す
         return profile;
       }
 
-      // 2017/01～2020/09
+      // 2015/01 ～ 2016/12
+      // 【修正】パトロールもマルチ同様に無条件有効化 (重賞のみの期間だがボタンは出す)
+      if (ym >= 201501 && ym < 201701) {
+        profile.paddock.sd = 1;
+        profile.multi.hd = 1; 
+        profile.patrol.hd = 2; // 古い形式のHD(SD相当)
+        return profile;
+      }
+
+      // 2017/01 ～ 2020/09
+      // 【修正】パトロールもマルチ同様に無条件有効化
       if (ym >= 201701 && ym < 202010) {
         profile.paddock.sd = 1;
-        profile.race.hd = 4; // 一般戦でもHD化が進んだ時期と仮定
+        profile.race.hd = 4;
         profile.race.sd = 2;
-        // マルチ・パトロールはこの時期一般戦では無いことが多い
+        profile.multi.hd = 4; 
+        profile.patrol.hd = 5; // 新しい形式のHD
         return profile;
       }
 
-      // 2020/10～2022/09 (ほぼ全部入り)
+      // 2020/10 ～ 2022/09
       if (ym >= 202010 && ym < 202210) {
         profile.paddock.hd = 4;
         profile.paddock.sd = 1;
@@ -171,7 +181,7 @@
         return profile;
       }
 
-      // 2022/10～ (時計付き含むフルセット)
+      // 2022/10 ～ 現在
       if (ym >= 202210) {
         profile.paddock.hd = 4;
         profile.paddock.sd = 1;
@@ -188,16 +198,15 @@
     function buildViewerUrl(parsed, dateStr, kind, quality) {
       if (!parsed || !quality || !dateStr) return null;
 
-      // dateStr: YYYYMMDD
       const ym = yyyymmFromDate(dateStr);
       const yy = parsed.year.substring(2, 4);
-      const p = parseInt(parsed.place, 10).toString(); // 0埋め除去
+      const p = parseInt(parsed.place, 10).toString();
       const kNum = parseInt(parsed.kai, 10);
-      const k = (kNum >= 10) ? kNum.toString(16) : kNum.toString(); // HEX
+      const k = (kNum >= 10) ? kNum.toString(16) : kNum.toString();
       const dNum = parseInt(parsed.day, 10);
-      const d = (dNum >= 10) ? dNum.toString(16) : dNum.toString(); // HEX
+      const d = (dNum >= 10) ? dNum.toString(16) : dNum.toString();
       const rNum = parseInt(parsed.race, 10);
-      const rCode = (rNum >= 10) ? rNum.toString(16) : rNum.toString(); // HEX
+      const rCode = (rNum >= 10) ? rNum.toString(16) : rNum.toString();
 
       const viewerId = `${yy}${p}${k}${d}${rCode}`;
       
@@ -226,13 +235,12 @@
     const dateSection = document.getElementById('dateSection');
     const dateInput = document.getElementById('dateInput');
     const resultGrid = document.getElementById('resultGrid');
+    const noteSection = document.getElementById('noteSection');
 
-    // 1. URL Input Handling
     urlInput.addEventListener('input', handleUrlInput);
     
-    // クリップボードからの貼り付けを検知して即処理
     urlInput.addEventListener('paste', (e) => {
-      setTimeout(handleUrlInput, 10); // paste直後はvalueが空のことがあるため
+      setTimeout(handleUrlInput, 10);
     });
 
     clearBtn.addEventListener('click', () => {
@@ -251,12 +259,12 @@
         const pName = PLACE_MAP[parsed.place] || '海外';
         parseStatus.textContent = `${parsed.year}年 ${pName} ${parseInt(parsed.kai)}回${parseInt(parsed.day)}日 ${parseInt(parsed.race)}R`;
         
-        // Activate Date Input
         dateSection.classList.remove('opacity-30', 'pointer-events-none');
-        dateInput.value = ''; // Reset date
+        dateInput.value = ''; 
         dateInput.focus();
         resultGrid.innerHTML = '';
         resultGrid.classList.add('hidden');
+        noteSection.classList.add('hidden');
       } else {
         currentParsed = null;
         parseStatus.textContent = '';
@@ -271,30 +279,28 @@
       dateInput.value = '';
       resultGrid.innerHTML = '';
       resultGrid.classList.add('hidden');
+      noteSection.classList.add('hidden');
     }
 
-    // 2. Date Input Handling (PIN style)
     dateInput.addEventListener('input', (e) => {
       const val = dateInput.value.replace(/[^0-9]/g, '');
-      dateInput.value = val; // 数字以外除去
+      dateInput.value = val;
 
       if (val.length === 4 && currentParsed) {
-        // 4桁入ったら即生成
-        dateInput.blur(); // キーボード閉じる
+        dateInput.blur();
         generateButtons(val);
       } else {
         resultGrid.classList.add('hidden');
+        noteSection.classList.add('hidden');
       }
     });
 
-    // 3. Generate Buttons
     function generateButtons(mmdd) {
       if (!currentParsed) return;
       
       const fullDate = `${currentParsed.year}${mmdd}`; // YYYYMMDD
       const profile = getQualityProfile(fullDate);
 
-      // URL生成
       const urls = {
         raceHd: buildViewerUrl(currentParsed, fullDate, 'race', profile.race.hd),
         raceSd: buildViewerUrl(currentParsed, fullDate, 'race', profile.race.sd),
@@ -305,13 +311,11 @@
         time:   buildViewerUrl(currentParsed, fullDate, 'time', profile.time.hd),
       };
 
-      // 薄くするフラグ
       const dimRaceSd = !!urls.raceHd && !!urls.raceSd;
       const dimPadSd = !!urls.padHd && !!urls.padSd;
 
-      // HTML生成ヘルパ
       const makeBtn = (url, label, colorCls, iconHtml, dim) => {
-        if (!url) return ''; // URLなければ非表示（今回はレイアウト崩れ防ぐため空文字か、プレースホルダにするか。ここでは非表示）
+        if (!url) return '';
         
         const opacity = dim ? 'opacity-40' : 'opacity-100';
         return `
@@ -322,29 +326,18 @@
         `;
       };
 
-      // グリッド生成（7つのアイコン + netkeibaリンク）
       let html = '';
 
-      // 1. Race HD
       if (urls.raceHd) html += makeBtn(urls.raceHd, 'レース(HD)', 'btn-race', '<i class="fas fa-play"></i>', false);
-      // 2. Race SD
       if (urls.raceSd) html += makeBtn(urls.raceSd, 'レース(SD)', 'btn-race', '<span class="font-bold text-sm">SD</span>', dimRaceSd);
       
-      // 3. Paddock HD
       if (urls.padHd)  html += makeBtn(urls.padHd, 'パドック(HD)', 'btn-paddock', '<i class="fas fa-horse"></i>', false);
-      // 4. Paddock SD
       if (urls.padSd)  html += makeBtn(urls.padSd, 'パドック(SD)', 'btn-paddock', '<span class="font-bold text-sm">SD</span>', dimPadSd);
 
-      // 5. Patrol
       if (urls.patrol) html += makeBtn(urls.patrol, 'パトロール', 'btn-patrol', '<i class="fas fa-video"></i>', false);
-      
-      // 6. Multi
-      if (urls.multi)  html += makeBtn(urls.multi, 'マルチ', 'btn-multi', '<i class="fas fa-border-all"></i>', false);
-      
-      // 7. Time
-      if (urls.time)   html += makeBtn(urls.time, '時計判定', 'btn-time', '<i class="fas fa-stopwatch"></i>', false);
+      if (urls.multi)  html += makeBtn(urls.multi, 'マルチカメラ', 'btn-multi', '<i class="fas fa-border-all"></i>', false);
+      if (urls.time)   html += makeBtn(urls.time, '時計表示', 'btn-time', '<i class="fas fa-stopwatch"></i>', false);
 
-      // 8. Netkeiba Original (便利なので入れておく)
       html += `
         <a href="https://db.sp.netkeiba.com/race/${currentParsed.fullId}/" target="_blank" class="btn-icon btn-netkeiba fade-in">
           <div class="text-2xl mb-1"><i class="fas fa-arrow-up-right-from-square"></i></div>
@@ -354,8 +347,8 @@
 
       resultGrid.innerHTML = html;
       resultGrid.classList.remove('hidden');
+      noteSection.classList.remove('hidden'); // 注意書きを表示
     }
-
   </script>
 </body>
 </html>
