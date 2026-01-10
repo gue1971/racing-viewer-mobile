@@ -102,9 +102,19 @@
   </div>
 
   <div id="initialActionArea" class="w-full max-w-sm flex justify-center mb-6 fade-in">
-    <a href="https://sp.netkeiba.com/" target="_blank" rel="noopener" class="btn-icon btn-row btn-netkeiba w-full shadow-lg">
-      <div class="icon-lg"><i class="fas fa-home"></i></div>
-      <div class="text-lg">netkeiba</div>
+    <a href="https://sp.netkeiba.com/" 
+      target="_blank" 
+      rel="noopener" 
+      class="btn-icon btn-row btn-netkeiba w-full shadow-lg relative overflow-hidden group">
+      
+      <div class="icon-lg flex gap-2">
+        <i class="fas fa-calendar-check"></i>
+        <i class="fas fa-eye"></i>
+      </div>
+      
+      <div class="text-lg font-bold">netkeiba (日付見て!)</div>
+
+      <div class="absolute inset-0 bg-white opacity-0 group-active:opacity-20 transition-opacity"></div>
     </a>
   </div>
 
