@@ -7,9 +7,9 @@
 
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <meta name="theme-color" content="#111111" />
+  <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
@@ -18,8 +18,9 @@
 
     body {
       font-family: 'Noto Sans JP', sans-serif;
-      background-color: #111;
-      color: #e5e5e5;
+      /* 背景を白、文字を濃いグレーに */
+      background-color: #ffffff;
+      color: #1f2937;
       touch-action: manipulation;
     }
 
@@ -37,7 +38,7 @@
       font-weight: bold;
       transition: transform 0.1s, opacity 0.2s;
       text-decoration: none;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* 影を少し薄く */
     }
     .btn-icon:active { transform: scale(0.96); }
     
@@ -50,14 +51,15 @@
     }
     .btn-row .icon-lg { margin-bottom: 0; }
 
+    /* ボタン色は維持（文字色は白のまま） */
     .btn-netkeiba { background-color: #3850B0; color: #ffffff; }
     .btn-race { background-color: #783020; color: #ffffff; }
     .btn-paddock { background-color: #14532d; color: #dcfce7; }
-    .btn-patrol { background-color: #374151; color: #f3f4f6; }
+    .btn-patrol { background-color: #4b5563; color: #f9fafb; } /* 少し明るく調整 */
     .btn-multi { background-color: #581c87; color: #f3e8ff; }
     .btn-time { background-color: #312e81; color: #e0e7ff; }
 
-    /* PIN入力風スタイル */
+    /* PIN入力風スタイル（白背景用） */
     .pin-input {
       font-family: 'Roboto Mono', monospace;
       letter-spacing: 0.5em;
@@ -65,15 +67,18 @@
       font-size: 2rem;
       background: transparent;
       border: none;
-      border-bottom: 2px solid #444;
-      color: white;
+      /* 下線を薄いグレーに */
+      border-bottom: 2px solid #e5e7eb;
+      /* 入力文字色を黒に */
+      color: #111;
       width: 100%;
       outline: none;
       padding: 10px 0;
       transition: border-color 0.3s;
     }
     .pin-input:focus { border-color: #22c55e; }
-    .pin-input::placeholder { color: #333; letter-spacing: normal; font-size: 1rem; font-family: sans-serif; }
+    /* プレースホルダーを薄いグレーに */
+    .pin-input::placeholder { color: #d1d5db; letter-spacing: normal; font-size: 1rem; font-family: sans-serif; }
 
     .fade-in { animation: fadeIn 0.3s ease-out forwards; opacity: 0; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -84,18 +89,18 @@
 <body class="min-h-screen flex flex-col items-center justify-start pt-8 px-6 pb-10">
 
   <div class="w-full max-w-sm mb-6">
-    <label class="block text-sm text-gray-400 mb-1 pl-1">netkeiba URL (Paste)</label>
+    <label class="block text-sm text-gray-500 mb-1 pl-1">netkeiba URL (Paste)</label>
     <div class="relative">
       <input type="text" id="urlInput" 
-        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-4 text-base text-gray-200 focus:border-green-500 outline-none transition-colors"
+        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-900 focus:border-green-500 outline-none transition-colors placeholder-gray-400"
         placeholder="https://db.sp.netkeiba.com/..."
         autocomplete="off"
       >
-      <button id="clearBtn" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 p-2 hidden">
+      <button id="clearBtn" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-2 hidden hover:text-gray-600">
         <i class="fas fa-times-circle text-lg"></i>
       </button>
     </div>
-    <div id="parseStatus" class="h-6 mt-2 text-sm text-green-500 parse-info truncate text-center"></div>
+    <div id="parseStatus" class="h-6 mt-2 text-sm text-green-600 parse-info truncate text-center"></div>
   </div>
 
   <div id="dateSection" class="w-full max-w-[200px] mb-6 opacity-30 transition-opacity duration-300 pointer-events-none">
@@ -133,9 +138,9 @@
 
   <div id="noteSection" class="w-full max-w-sm text-xs text-gray-500 leading-relaxed hidden text-center">
     <div class="space-y-1">
-      <p class="font-bold text-gray-400">マルチカメラ・パトロール</p>
+      <p class="font-bold text-gray-600">マルチカメラ・パトロール</p>
       <p>重賞：2015.1〜　　全て：2020.10〜</p>
-      <p class="pt-2 font-bold text-gray-400">時計表示：<span class="font-normal text-gray-500">2022.10〜</span></p>
+      <p class="pt-2 font-bold text-gray-600">時計表示：<span class="font-normal text-gray-500">2022.10〜</span></p>
     </div>
   </div>
 
